@@ -1,0 +1,13 @@
+{
+  "name": "csv",
+  "version": "0.1.0",
+  "repo": "c-sdk/csv",
+  "description": "Implementation of RFC 4180 \"Common Format and MIME Type for Comma-Separated Values (CSV) Files\" + RFC 7111 \"URI Fragment Identifiers for the text/csv Media Type\".",
+  "license": "unlicense",
+  "keyworkds": ["http", "methods", "fields", "headers", "types", "statuses", "http status", "http methods", "http header field names"],
+  "src": ["./csv.h", "./csv.c"],
+  "dependencies": {
+    "c-sdk/arena": "*",
+    "jwerle/libutf8": "*"
+  }
+}

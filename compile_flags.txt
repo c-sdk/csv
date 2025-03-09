@@ -1,0 +1,5 @@
+-std=c17
+-I.
+-I./deps/utf8
+-I./deps/arena
+
