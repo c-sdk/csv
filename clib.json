@@ -8,6 +8,7 @@
   "src": ["./csv.h", "./csv.c"],
   "dependencies": {
     "c-sdk/arena": "*",
-    "jwerle/libutf8": "*"
+    "jwerle/libutf8": "*",
+    "TingPing/ustring": "*"
   }
 }
