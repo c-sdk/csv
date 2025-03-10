@@ -41,6 +41,17 @@ static int _push_entry(arena_t* arena,
                        const char* const source,
                        size_t length) {
 
+  if (source == NULL) {
+    csv->rows.content[csv->rows.count++] = NULL;
+    return 0;
+  }
+
+  if (csv->rows.count + 1 >= csv->rows.capacity) {
+    size_t capacity = csv->rows.capacity * 2;
+    csv->rows.content = realloc(csv->rows.content, sizeof(char*) * capacity * csv->column_count);
+    csv->rows.capacity = capacity;
+  }
+
   csv->rows.content[csv->rows.count++] =
     arena_string_with_null(arena, source, length + 1);
 
@@ -168,14 +179,14 @@ int csv_parse_custom_delimiter(arena_t* arena,
     } break;
     case CSV_PARSER_EOL: {
       if (expecting_value) {
-        csv->rows.content[csv->rows.count++] = NULL;
+        _push_entry(arena, csv, NULL, 0);
       }
       csv->row_count += *(position + item_length) != 0;
       expecting_value = true;
     } break;
     case CSV_PARSER_SEPARATOR: {
       if (expecting_value) {
-        csv->rows.content[csv->rows.count++] = NULL;
+        _push_entry(arena, csv, NULL, 0);
       } else {
         expecting_value = true;
       }
