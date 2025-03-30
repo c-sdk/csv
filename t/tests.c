@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -7,7 +6,63 @@
 #include "arena.h"
 #include "csv.h"
 
-void test_empty_string() {
+#include "assertion-macros.h"
+
+void test_parse_empty_value(void) {
+  const char* data = "";
+  const char* end = csv_parse_value(data, ',');
+  assert_equal(*data, *end);
+}
+
+void test_parse_value(void) {
+  const char* data = "abc";
+  const char* end = csv_parse_value(data, ',');
+  assert_equal(*(data + 3), *end);
+}
+
+void test_parse_quoted_value(void) {
+  const char* data = "\"abc\"";
+  const char* end = csv_parse_quoted(data, ',');
+  assert_equal(*(data + 5), *end);
+}
+
+void test_parse_separator(void) {
+  const char* data = ",";
+  const char* end = csv_parse_separator(data, ',');
+  assert_equal(*(data + 1), *end);
+}
+
+void test_fail_to_parse_separator(void) {
+  const char* data = "a,";
+  const char* end = csv_parse_separator(data, ',');
+  assert_null(end);
+}
+
+void test_parse_crlf(void) {
+  const char* data = "\r\n";
+  const char* end = csv_parse_crlf_eol(data, ',');
+  assert_equal(*(data + 2), *end);
+}
+
+void test_fail_to_parse_crlf(void) {
+  const char* data = "a";
+  const char* end = csv_parse_crlf_eol(data, ',');
+  assert_null(end);
+}
+
+void test_parse_cr(void) {
+  const char* data = "\n";
+  const char* end = csv_parse_cr_eol(data, ',');
+  assert_equal(*(data + 1), *end);
+}
+
+void test_fail_to_parse_cr(void) {
+  const char* data = "a";
+  const char* end = csv_parse_cr_eol(data, ',');
+  assert_null(end);
+}
+
+void test_empty_string(void) {
   const char *csv_content = "";
 
   struct csv_t csv = {0};
@@ -16,7 +71,7 @@ void test_empty_string() {
   assert(csv.row_count == 0);
 }
 
-void test_single_value_without_header_without_eol() {
+void test_single_value_without_header_without_eol(void) {
   struct csv_t csv = {0};
 
   arena_t arena = {0};
@@ -32,7 +87,7 @@ void test_single_value_without_header_without_eol() {
   arena_free(&arena);
 }
 
-void test_single_quoted_value() {
+void test_single_quoted_value(void) {
   struct csv_t csv = {0};
 
   arena_t arena = {0};
@@ -49,7 +104,7 @@ void test_single_quoted_value() {
   arena_free(&arena);
 }
 
-void test_single_quoted_value_with_new_line() {
+void test_single_quoted_value_with_new_line(void) {
   struct csv_t csv = {0};
 
   arena_t arena = {0};
@@ -66,7 +121,7 @@ void test_single_quoted_value_with_new_line() {
   arena_free(&arena);
 }
 
-void test_single_quoted_value_with_comma() {
+void test_single_quoted_value_with_comma(void) {
   struct csv_t csv = {0};
 
   arena_t arena = {0};
@@ -83,7 +138,7 @@ void test_single_quoted_value_with_comma() {
   arena_free(&arena);
 }
 
-void test_single_value_without_header_with_crlf_eol() {
+void test_single_value_without_header_with_crlf_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -100,7 +155,7 @@ void test_single_value_without_header_with_crlf_eol() {
   arena_free(&arena);
 }
 
-void test_single_value_without_header_with_lf_eol() {
+void test_single_value_without_header_with_lf_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -117,7 +172,7 @@ void test_single_value_without_header_with_lf_eol() {
   arena_free(&arena);
 }
 
-void test_single_line_with_2_values_sep_by_comma_without_eol() {
+void test_single_line_with_2_values_sep_by_comma_without_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -136,7 +191,7 @@ void test_single_line_with_2_values_sep_by_comma_without_eol() {
   arena_free(&arena);
 }
 
-void test_single_value_with_crlf_eol() {
+void test_single_value_with_crlf_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -155,7 +210,7 @@ void test_single_value_with_crlf_eol() {
   arena_free(&arena);
 }
 
-void test_single_line_with_2_values_sep_by_comma_with_lf_eol() {
+void test_single_line_with_2_values_sep_by_comma_with_lf_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -174,7 +229,7 @@ void test_single_line_with_2_values_sep_by_comma_with_lf_eol() {
   arena_free(&arena);
 }
 
-void test_single_line_with_2_values_sep_by_comma_with_quoted() {
+void test_single_line_with_2_values_sep_by_comma_with_quoted(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -193,7 +248,7 @@ void test_single_line_with_2_values_sep_by_comma_with_quoted() {
   arena_free(&arena);
 }
 
-void test_single_line_with_2_values_sep_by_comma_with_scaped_quotes() {
+void test_single_line_with_2_values_sep_by_comma_with_scaped_quotes(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -212,7 +267,7 @@ void test_single_line_with_2_values_sep_by_comma_with_scaped_quotes() {
   arena_free(&arena);
 }
 
-void test_single_line_with_3_values_with_escaped_quotes_in_the_middle() {
+void test_single_line_with_3_values_with_escaped_quotes_in_the_middle(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -232,7 +287,7 @@ void test_single_line_with_3_values_with_escaped_quotes_in_the_middle() {
   arena_free(&arena);
 }
 
-void test_2_rows() {
+void test_2_rows(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -257,7 +312,7 @@ void test_2_rows() {
   arena_free(&arena);
 }
 
-void test_single_row_with_first_item_empty() {
+void test_single_row_with_first_item_empty(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -277,7 +332,7 @@ void test_single_row_with_first_item_empty() {
   arena_free(&arena);
 }
 
-void test_single_row_with_empty_item_before_eol() {
+void test_single_row_with_empty_item_before_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -297,7 +352,7 @@ void test_single_row_with_empty_item_before_eol() {
   arena_free(&arena);
 }
 
-void test_single_row_with_empty_item_before_eol_without_proper_eol() {
+void test_single_row_with_empty_item_before_eol_without_proper_eol(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -317,7 +372,7 @@ void test_single_row_with_empty_item_before_eol_without_proper_eol() {
   arena_free(&arena);
 }
 
-void test_2_rows_with_empty_item_before_eol_first_row() {
+void test_2_rows_with_empty_item_before_eol_first_row(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -342,7 +397,7 @@ void test_2_rows_with_empty_item_before_eol_first_row() {
   arena_free(&arena);
 }
 
-void test_2_rows_with_empty_item_before_eol_last_row() {
+void test_2_rows_with_empty_item_before_eol_last_row(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -367,7 +422,7 @@ void test_2_rows_with_empty_item_before_eol_last_row() {
   arena_free(&arena);
 }
 
-void test_reading_unicode() {
+void test_reading_unicode(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -390,7 +445,7 @@ void test_reading_unicode() {
   arena_free(&arena);
 }
 
-void test_parse_with_custom_delimiter() {
+void test_parse_with_custom_delimiter(void) {
   arena_t arena = {0};
   arena_create(&arena, 4096);
 
@@ -413,8 +468,18 @@ void test_parse_with_custom_delimiter() {
   arena_free(&arena);
 }
 
-int main() {
+int main(void) {
   printf("test csv\n");
+  test_parse_empty_value();
+  test_parse_value();
+  test_parse_quoted_value();
+  test_parse_separator();
+  test_fail_to_parse_separator();
+  test_parse_crlf();
+  test_fail_to_parse_crlf();
+  test_parse_cr();
+  test_fail_to_parse_cr();
+
   test_empty_string();
   test_single_value_without_header_without_eol();
   test_single_quoted_value();

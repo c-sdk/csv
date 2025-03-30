@@ -2,7 +2,7 @@
 #define _AIL_CSV_H_ 1
 
 #include <stddef.h>
-#include <stdbool.h>
+
 #include "arena.h"
 
 #define CSV_COMMA_DELIMITER ','
@@ -18,6 +18,12 @@ struct csv_t {
   size_t column_count;
   size_t row_count;
 };
+
+const char *csv_parse_value(const char *position, unsigned char delimiter);
+const char *csv_parse_quoted(const char *position, unsigned char delimiter);
+const char *csv_parse_separator(const char *position, unsigned char delimiter);
+const char *csv_parse_crlf_eol(const char *position, unsigned char delimiter);
+const char *csv_parse_cr_eol(const char* position, unsigned char delimiter);
 
 int csv_parse_custom_delimiter(arena_t *arena,
                                struct csv_t *csv,

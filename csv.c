@@ -1,7 +1,9 @@
 #include <stdlib.h>
 
-#include "csv.h"
+#include "status.h"
 #include "arena.h"
+
+#include "csv.h"
 
 // "" 0 ok
 // "\r\n" 0
@@ -19,58 +21,81 @@ enum csv_parser_item_t {
   CSV_PARSER_EOF
 };
 
-static bool _textdata_character(unsigned char character, unsigned char delimiter) {
+static int _textdata_character(unsigned char character, unsigned char delimiter) {
   return (character != delimiter &&
           (character == 32 ||
-          character == 33 ||
-          (character >= 35 && character <= 43) ||
+           character == 33 ||
+           (character >= 35 && character <= 43) ||
            character >= 45));
 }
 
-static bool _quoted_string(char* position, unsigned char delimiter) {
+static int _quoted_string(char* position, unsigned char delimiter) {
   unsigned character = *position;
-  return
-    _textdata_character(character, delimiter) ||
-    character == 44 ||
-    character == 13 ||
-    character == 10;
+  return (_textdata_character(character, delimiter) ||
+          character == 10 ||
+          character == 13 ||
+          character == 44);
 }
 
-static int _push_entry(arena_t* arena,
-                       struct csv_t* csv,
-                       const char* const source,
-                       size_t length) {
-
+static enum status_t _push_entry(arena_t* arena,
+                                 struct csv_t* csv,
+                                 const char* const source,
+                                 size_t length) {
   if (source == NULL) {
     csv->rows.content[csv->rows.count++] = NULL;
-    return 0;
+    return STATUS_OK;
   }
 
   if (csv->rows.count + 1 >= csv->rows.capacity) {
     size_t capacity = csv->rows.capacity * 2;
-    csv->rows.content = realloc(csv->rows.content, sizeof(char*) * capacity * csv->column_count);
+    csv->rows.content = realloc(csv->rows.content,
+                                sizeof(char*) * capacity * csv->column_count);
     csv->rows.capacity = capacity;
   }
 
   csv->rows.content[csv->rows.count++] =
     arena_string_with_null(arena, source, length + 1);
 
-  return 0;
+  return STATUS_OK;
 }
 
 // "" | """" / must be consecutive/ | "\""
 static char* _parse_quoted_item(const char* position, unsigned char delimiter) {
   char* next = (char*)position;
-  while (_quoted_string(++next, delimiter) == true ||
-         (*next++ == 0x22 && *next == 0x22));
+  while (_quoted_string(++next, delimiter) ||
+         (*next == 0x22 && *++next == 0x22));
   return next;
 }
 
 static char* _parse_item(const char* position, unsigned char delimiter) {
-  while (*position++ != 0 && _textdata_character(*position, delimiter));
+  while ((*position != 0) &&
+         _textdata_character(*position, delimiter)) {
+    ++position;
+  }
   return (char*)position;
 }
 
+const char* csv_parse_value(const char* position, unsigned char delimiter) {
+  return _parse_item(position, delimiter);
+}
+
+const char* csv_parse_quoted(const char* position, unsigned char delimiter) {
+  return _parse_quoted_item(position, delimiter);
+}
+
+const char* csv_parse_separator(const char* position, unsigned char delimiter) {
+  return (*position == delimiter) ? position + 1 : NULL;
+}
+
+const char* csv_parse_crlf_eol(const char* position, unsigned char delimiter) {
+  (void)delimiter;
+  return (*position == '\r' && *(position + 1) != 0 && *(position + 1) == '\n') ? position + 2 : NULL;
+}
+
+const char* csv_parse_cr_eol(const char* position, unsigned char delimiter) {
+  (void)delimiter;
+  return *position == '\n' ? position + 1 : NULL;
+}
 
 static size_t _parse(const char* const data,
                      enum csv_parser_item_t* item,
@@ -87,55 +112,50 @@ static size_t _parse(const char* const data,
     return 1;
   }
 
+  const char* end = NULL;
+
   switch (*position) {
   case '\r': {
-    if (*(position+1) != '\n') {
-      *item = CSV_PARSER_INVALID;
-      return 0;
-    }
+    end = csv_parse_crlf_eol(position, delimiter);
     *item = CSV_PARSER_EOL;
-    return 2;
   } break;
   case '\n':
     *item = CSV_PARSER_EOL;
     return 1;
   case '"': {
-    char* end = _parse_quoted_item(position, delimiter);
+    end = csv_parse_quoted(position, delimiter);
     *item = CSV_PARSER_QUOTED_ITEM;
-    return end - position;
   } break;
   default: {
-    char* end = _parse_item(position, delimiter);
+    end = csv_parse_value(position, delimiter);
     *item = CSV_PARSER_ITEM;
-    return end - position;
   } break;
   }
 
-  return 0;
+  return (end == NULL) ? (*item = CSV_PARSER_INVALID, 0) : end - position;
 }
 
 static size_t _count_columns(const char* position, unsigned char delimiter) {
   size_t item_length = 0;
-  char* next = NULL;
   enum csv_parser_item_t item = CSV_PARSER_INIT;
   size_t columns = 0;
-  bool expecting_item = true;
+  enum status_t expecting_item = STATUS_OK;
 
   while ((item_length = _parse(position, &item, delimiter)), item != CSV_PARSER_EOF) {
     switch (item) {
     case CSV_PARSER_QUOTED_ITEM:
     case CSV_PARSER_ITEM: {
       ++columns;
-      expecting_item = false;
+      expecting_item = STATUS_FAILURE;
     } break;
     case CSV_PARSER_SEPARATOR: {
-      if (expecting_item) {
+      if (status_is_ok(expecting_item)) {
         ++columns;
       }
-      expecting_item = true;
+      expecting_item = STATUS_OK;
     } break;
     case CSV_PARSER_EOL: {
-      if (expecting_item) {
+      if (status_is_ok(expecting_item)) {
         ++columns;
       }
       return columns;
@@ -146,7 +166,7 @@ static size_t _count_columns(const char* position, unsigned char delimiter) {
     position += item_length;
   }
 
-  return columns + expecting_item;
+  return columns + status_is_ok(expecting_item);
 }
 
 int csv_parse_custom_delimiter(arena_t* arena,
@@ -167,28 +187,29 @@ int csv_parse_custom_delimiter(arena_t* arena,
   csv->row_count = 1;
 
   size_t item_length = 0;
-  bool expecting_value = true;
+  enum status_t expecting_value = STATUS_OK;
   enum csv_parser_item_t item = CSV_PARSER_INIT;
 
   while ((item_length = _parse(position, &item, delimiter)), item != CSV_PARSER_EOF) {
     switch (item) {
     case CSV_PARSER_QUOTED_ITEM:
     case CSV_PARSER_ITEM: {
-      _push_entry(arena, csv, position, item_length);
-      expecting_value = false;
+      (void)_push_entry(arena, csv, position, item_length);
+      expecting_value = STATUS_FAILURE;
     } break;
     case CSV_PARSER_EOL: {
-      if (expecting_value) {
-        _push_entry(arena, csv, NULL, 0);
+      if (status_is_ok(expecting_value)) {
+        (void)_push_entry(arena, csv, NULL, 0);
       }
       csv->row_count += *(position + item_length) != 0;
-      expecting_value = true;
+      expecting_value = STATUS_OK;
     } break;
     case CSV_PARSER_SEPARATOR: {
-      if (expecting_value) {
-        _push_entry(arena, csv, NULL, 0);
+      if (status_is_ok(expecting_value)) {
+        (void)_push_entry(arena, csv, NULL, 0);
+        expecting_value = STATUS_FAILURE;
       } else {
-        expecting_value = true;
+        expecting_value = STATUS_OK;
       }
     } break;
     default:;
