@@ -8,10 +8,10 @@
   "src": ["./csv.h", "./csv.c"],
   "dependencies": {
     "c-sdk/arena": "*",
-    "c-sdk/status_type": "*",
-    "stephenmathieson/assertion-macros.h": "0.3.1"
+    "c-sdk/status_type": "*"
   },
   "development": {
-    "jwerle/libutf8": "*"
+    "jwerle/libutf8": "*",
+    "stephenmathieson/assertion-macros.h": "0.3.1"
   }
 }
