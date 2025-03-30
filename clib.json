@@ -1,6 +1,6 @@
 {
   "name": "csv",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "repo": "c-sdk/csv",
   "description": "Implementation of RFC 4180 \"Common Format and MIME Type for Comma-Separated Values (CSV) Files\" + RFC 7111 \"URI Fragment Identifiers for the text/csv Media Type\".",
   "license": "unlicense",
